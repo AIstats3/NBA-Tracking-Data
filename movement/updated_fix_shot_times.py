@@ -6,6 +6,17 @@ from tqdm import tqdm
 from scipy.spatial.distance import euclidean
 
 
+from movement import utils
+import movement.config as CONFIG
+
+def load_shots():
+    shots = pd.read_csv(f"{CONFIG.data.shots.dir}/shots.csv")
+    shots["EVENTTIME"] = utils.convert_time(
+        minutes=shots["MINUTES_REMAINING"].values, seconds=shots["SECONDS_REMAINING"].values
+    )
+    shots["GAME_ID"] = "00" + shots["GAME_ID"].astype(int).astype(str)
+    return shots
+
 def sg_filter(x, m, k=0):
     mid = len(x) // 2
     a = x - x[mid]
@@ -300,7 +311,7 @@ def correct_shotsv3(game_shots, movement, events):
 
     return fixed_shots
 
-def correct_shotsv4(game_shots, movement, events):
+def correct_shots(game_shots, movement, events):
     fixed_shots = pd.DataFrame(columns=game_shots.columns)
 
     for ind, shot in game_shots.iterrows():
@@ -373,14 +384,35 @@ def correct_shotsv4(game_shots, movement, events):
             )
 
         except Exception:
-            print(f"V4 Error processing shot with event_id {shot['GAME_EVENT_ID']}")
             try:
-                correct_shots_legacy(game_shots, movement, events)
+                correct_shotsv2(game_shots, movement, events)
             except Exception:
-                print(f"Legacy Error processing shot with event_id {shot['GAME_EVENT_ID']}")
+                try:
+                    correct_shots_legacy(game_shots, movement, events)
+                except Exception:
+                    pass
             continue
 
         # fixed_shots = fixed_shots.append(shot)
         fixed_shots = pd.concat([fixed_shots, pd.DataFrame([shot])], ignore_index=True)
 
     return fixed_shots
+
+if __name__ == "__main__":
+    games = utils.get_games()
+    events = utils.get_events(CONFIG.data.events.dir, games)
+    shots = load_shots()
+    fixed_shots = pd.DataFrame(columns=shots.columns)
+
+    for game in tqdm(games):
+        try:
+            game_movement = pd.read_csv(f"{CONFIG.data.movement.converted.dir}/{game}_converted.csv")
+            game_shots = shots.query("GAME_ID == @game")
+            game_events = events.query("GAME_ID == @game")
+        except FileNotFoundError:
+            continue
+
+        fixed_shots = pd.concat([fixed_shots, correct_shots(game_shots, game_movement, game_events)], ignore_index=True)
+        # fixed_shots = fixed_shots.append(correct_shots(game_shots, game_movement, game_events))
+
+    fixed_shots.to_csv(f"{CONFIG.data.shots.dir}/shots_fixed.csv", index=False)
