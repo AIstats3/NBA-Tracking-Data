@@ -39,7 +39,7 @@ python movement/convert_movement.py
 4. The fixed shot times, along with the shot locations in half court space are in `data/shots/fixed_shots.csv`. They are formed from executing the script.
 
 ```shell
-python movement/updated_fix_shot_times.py
+python movement/fix_shot_times.py
 ```
 
 In the fixing logic, the shot time is defined as the highest acceleration point before the ball reaches it's peak, within a defined window.

@@ -22,12 +22,13 @@ def add_names(tracking):
     # Add the values we want
     for player in players:
         id_dict[player['playerid']] = [player["firstname"]+" "+player["lastname"],
-                                   player["jersey"]]
+                                   player["jersey"], player["position"]]
 
     id_dict.update({-1: ['ball', np.nan]})
 
     tracking["player_name"] = tracking.player_id.map(lambda x: id_dict[x][0])
     tracking["player_jersey"] = tracking.player_id.map(lambda x: id_dict[x][1])
+    tracking["player_position"] = tracking.player_id.map(lambda x: id_dict[x][2])
     
 
     
